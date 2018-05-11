@@ -5,12 +5,40 @@ import static org.mockito.Mockito.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
-public class GT4500Test {
+import java.util.Arrays;
+import java.util.Collection;
 
+@RunWith(Parameterized.class)
+public class GT4500Test {
   private GT4500 ship;
   private TorpedoStore mockPrimary, mockSecondary;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+            { true, true, true },
+            { true, false, true },
+            { false, true, true },
+            { false, false, false }
+    });
+  }
+
+  private boolean primaryWorks, secondaryWorks, expected;
+
+  public GT4500Test(boolean primary, boolean secondary, boolean assertion) {
+    primaryWorks = primary;
+    secondaryWorks = secondary;
+    expected = assertion;
+  }
+
+  void setEmpty(boolean value) {
+    when(mockPrimary.isEmpty()).thenReturn(value);
+    when(mockSecondary.isEmpty()).thenReturn(value);
+  }
 
   @Before
   public void init() {
@@ -20,108 +48,61 @@ public class GT4500Test {
   }
 
   @Test
-  public void fireTorpedo_Single_Success(){
+  public void fireTorpedo_All() {
     // Arrange
-    when(mockPrimary.fire(1)).thenReturn(true);
-    when(mockSecondary.fire(1)).thenReturn(true);
+    when(mockPrimary.fire(1)).thenReturn(primaryWorks);
+    when(mockSecondary.fire(1)).thenReturn(secondaryWorks);
+    setEmpty(false);
+
+    // Act
+    boolean result = ship.fireTorpedo(FiringMode.ALL);
+
+    // Assert
+    assertEquals(expected, result);
+  }
+
+  @Test
+  public void fireTorpedo_Single() {
+    // Arrange
+    when(mockPrimary.fire(1)).thenReturn(primaryWorks);
+    when(mockSecondary.fire(1)).thenReturn(secondaryWorks);
+    setEmpty(false);
 
     // Act
     boolean result = ship.fireTorpedo(FiringMode.SINGLE);
 
     // Assert
-    assertEquals(true, result);
+    assertEquals(expected, result);
   }
 
   @Test
-  public void fireTorpedo_All_Success(){
+  public void fireTorpedo_Alternate(){
     // Arrange
-    when(mockPrimary.fire(1)).thenReturn(true);
-    when(mockSecondary.fire(1)).thenReturn(true);
+    when(mockPrimary.fire(1)).thenReturn(primaryWorks);
+    when(mockSecondary.fire(1)).thenReturn(secondaryWorks);
+    setEmpty(false);
 
     // Act
-    boolean result = ship.fireTorpedo(FiringMode.ALL);
+    boolean result1 = ship.fireTorpedo(FiringMode.SINGLE);
+    when(mockPrimary.fire(1)).thenReturn(!primaryWorks);
+    when(mockSecondary.fire(1)).thenReturn(!secondaryWorks);
+    boolean result2 = ship.fireTorpedo(FiringMode.SINGLE);
 
     // Assert
-    assertEquals(true, result);
+    assertEquals(primaryWorks && secondaryWorks ? false : expected, result1 && result2);
   }
 
   @Test
-  public void fireTorpedo_All_Fail(){
+  public void fireTorpedo_Empty(){
     // Arrange
-    when(mockPrimary.fire(1)).thenReturn(false);
-    when(mockSecondary.fire(1)).thenReturn(false);
+    when(mockPrimary.fire(1)).thenReturn(primaryWorks);
+    when(mockSecondary.fire(1)).thenReturn(secondaryWorks);
+    setEmpty(true);
 
     // Act
-    boolean result = ship.fireTorpedo(FiringMode.ALL);
+    boolean result = ship.fireTorpedo(FiringMode.SINGLE);
 
     // Assert
     assertEquals(false, result);
-  }
-
-  @Test
-  public void fireTorpedo_Single_Primary_Fail(){
-    // Arrange
-    when(mockPrimary.fire(1)).thenReturn(false);
-    when(mockSecondary.fire(1)).thenReturn(true);
-
-    // Act
-    boolean result = ship.fireTorpedo(FiringMode.SINGLE);
-
-    // Assert
-    assertEquals(true, result);
-  }
-
-  @Test
-  public void fireTorpedo_Single_Secondary_Fail(){
-    // Arrange
-    when(mockPrimary.fire(1)).thenReturn(true);
-    when(mockSecondary.fire(1)).thenReturn(false);
-
-    // Act
-    ship.fireTorpedo(FiringMode.SINGLE);
-    boolean result = ship.fireTorpedo(FiringMode.SINGLE); // Primary should be fired again
-
-    // Assert
-    assertEquals(true, result);
-  }
-
-  @Test
-  public void fireTorpedo_All_Primary_Fail(){
-    // Arrange
-    when(mockPrimary.fire(1)).thenReturn(false);
-    when(mockSecondary.fire(1)).thenReturn(true);
-
-    // Act
-    boolean result = ship.fireTorpedo(FiringMode.ALL);
-
-    // Assert
-    assertEquals(true, result);
-  }
-
-  @Test
-  public void fireTorpedo_All_Secondary_Fail(){
-    // Arrange
-    when(mockPrimary.fire(1)).thenReturn(true);
-    when(mockSecondary.fire(1)).thenReturn(false);
-
-    // Act
-    boolean result = ship.fireTorpedo(FiringMode.ALL);
-
-    // Assert
-    assertEquals(true, result);
-  }
-
-  @Test
-  public void fireTorpedo_Alternating_Fail() {
-    when(mockPrimary.fire(1)).thenReturn(true);
-    when(mockSecondary.fire(1)).thenReturn(false);
-
-    boolean result1 = ship.fireTorpedo(FiringMode.SINGLE);
-
-    when(mockPrimary.fire(1)).thenReturn(false);
-
-    boolean result2 = ship.fireTorpedo(FiringMode.SINGLE);
-
-    assertEquals(true, result1 && !result2);
   }
 }
